@@ -25,6 +25,12 @@
     }];
     [self presentViewController:imagePicker animated:YES completion:nil];
 }
+- (IBAction)mutButtonPressed:(UIButton *)sender {
+    UIViewController *imagePicker = [MyImagePicker showMutMyImagePicker:^(NSArray *array) {
+        NSLog(@">>>>>>>>>>image %@", array);
+    }];
+    [self presentViewController:imagePicker animated:YES completion:nil];
+}
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];

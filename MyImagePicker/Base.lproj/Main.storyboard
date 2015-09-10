@@ -16,17 +16,32 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="YVA-xh-kJg">
-                                <rect key="frame" x="78" y="85" width="46" height="30"/>
-                                <state key="normal" title="Button">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="YVA-xh-kJg">
+                                <rect key="frame" x="25" y="120" width="30" height="30"/>
+                                <state key="normal" title="单选">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
                                     <action selector="buttonPressed:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="5v0-Mi-r6Z"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="B4y-Zt-Fek">
+                                <rect key="frame" x="25" y="175" width="30" height="30"/>
+                                <state key="normal" title="多选">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="mutButtonPressed:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="zoe-dK-8GE"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="B4y-Zt-Fek" firstAttribute="top" secondItem="YVA-xh-kJg" secondAttribute="bottom" constant="25" id="5Ho-zX-rTq"/>
+                            <constraint firstItem="YVA-xh-kJg" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" constant="100" id="E6Q-2t-AeY"/>
+                            <constraint firstItem="B4y-Zt-Fek" firstAttribute="centerX" secondItem="YVA-xh-kJg" secondAttribute="centerX" id="nwi-mL-eTZ"/>
+                            <constraint firstItem="YVA-xh-kJg" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="25" id="wud-Tc-pwp"/>
+                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="x5A-6p-PRh" sceneMemberID="firstResponder"/>
