@@ -7,7 +7,6 @@
 //
 
 #import "MyImagePicker.h"
-#import <AVFoundation/AVFoundation.h>
 #import <AssetsLibrary/AssetsLibrary.h>
 #import "WaterFLayout.h"
 
@@ -263,8 +262,13 @@ UIImage* getScaleImageMaxSide(CGFloat length, UIImage *sourceImage)
 
 @property(nonatomic, strong) UIBarButtonItem *rightBarButtonItem;
 @property(nonatomic, assign) BOOL isMut;
+@property(nonatomic, assign) BOOL isCameraError;
 
 @end
+
+#define kMyImagePickerShowTipMsgNotification @"kMyImagePickerShowTipMsgNotification"
+#define kMyImagePickerCameraError @"kCameraError" //相机
+#define kMyImagePickerAlbumError @"kAlbumError" // 照片
 
 @implementation MyImagePicker
 
@@ -298,6 +302,10 @@ UIImage* getScaleImageMaxSide(CGFloat length, UIImage *sourceImage)
         self.imagePicker = nil;
     
     [[MyImagePicker captureSession] stopRunning];
+    [self clearCaptureSession];
+    [self clearMyPhotoView];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:kMyImagePickerShowTipMsgNotification object:nil];
 }
 
 + (UIViewController *)showMyImagePicker:(void (^)(UIImage *image))didFinishPickingImageBlock
@@ -381,6 +389,8 @@ UIImage* getScaleImageMaxSide(CGFloat length, UIImage *sourceImage)
         self.navigationItem.rightBarButtonItem = self.rightBarButtonItem;
     }
     
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didShowTipMsg:) name:kMyImagePickerShowTipMsgNotification object:nil];
+    
     self.groupButton = [UIButton buttonWithType:UIButtonTypeCustom];
     self.groupButton.frame = CGRectMake(0, 0, 120, self.navigationController.navigationBar.bounds.size.height);
     self.navigationItem.titleView = self.groupButton;
@@ -422,6 +432,10 @@ UIImage* getScaleImageMaxSide(CGFloat length, UIImage *sourceImage)
                 break;
         }
         NSLog(@">>>>>>>>>>errorMessage %@", errorMessage);
+        if(errorMessage)
+        {
+            [[NSNotificationCenter defaultCenter] postNotificationName:kMyImagePickerShowTipMsgNotification object:kMyImagePickerAlbumError];
+        }
     };
     
     ALAssetsLibraryGroupsEnumerationResultsBlock listGroupBlock = ^(ALAssetsGroup *group, BOOL *stop){
@@ -618,26 +632,32 @@ UIImage* getScaleImageMaxSide(CGFloat length, UIImage *sourceImage)
     return CGSizeMake(itemWidth, itemWidth);
 }
 
-static AVCaptureSession *session;
+static AVCaptureSession *session = nil;
 + (AVCaptureSession *)captureSession
 {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    if(!session)
+    {
         session =[[AVCaptureSession alloc]init];
         [session setSessionPreset:AVCaptureSessionPresetPhoto];
         AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
         NSError *error;
         AVCaptureDeviceInput *captureInput = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
         if(!captureInput)
+        {
             NSLog(@"Error: %@", error);
-        [session addInput:captureInput];
-        
-        [session startRunning];
-    });
+            
+            [[NSNotificationCenter defaultCenter] postNotificationName:kMyImagePickerShowTipMsgNotification object:kMyImagePickerCameraError];
+        }
+        else
+        {
+            [session addInput:captureInput];
+            [session startRunning];
+        }
+    }
     return session;
 }
 
-+ (void)clearCaptureSession
+- (void)clearCaptureSession
 {
     if(session)
     {
@@ -646,12 +666,19 @@ static AVCaptureSession *session;
     }
 }
 
-static MyPhotoView *photoInstance;
+static MyPhotoView *photoInstance = nil;
+
+- (void)clearMyPhotoView
+{
+    if(photoInstance)
+    {
+        photoInstance = nil;
+    }
+}
 + (MyPhotoView *)getTakePicture:(CGRect)frame
 {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        
+    if(!photoInstance)
+    {
         photoInstance = [[MyPhotoView alloc] init];
         photoInstance.frame = frame;
         
@@ -666,16 +693,34 @@ static MyPhotoView *photoInstance;
         takeLayer.frame = CGRectMake(photoInstance.bounds.size.width / 2.0f - takePicture.size.width / 2.0f, photoInstance.bounds.size.height / 2.0f - takePicture.size.height / 2.0f, takePicture.size.width, takePicture.size.height);
         takeLayer.contents = (id)takePicture.CGImage;
         [photoInstance.layer addSublayer:takeLayer];
-    });
+    }
     return photoInstance;
 }
 
-//- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker
-//{
-//    [[MyImagePicker captureSession] startRunning];
-//    [picker dismissViewControllerAnimated:YES completion:^{
-//    }];
-//}
+- (void)didShowTipMsg:(NSNotification *)noti
+{
+    NSString *objStr = (NSString *)noti.object;
+    if([objStr isEqualToString:kMyImagePickerAlbumError])
+    {
+        NSString *typeStr = [objStr isEqualToString:kMyImagePickerCameraError] ? @"相机" : @"照片";
+        NSString *msgStr = [NSString stringWithFormat:@"请在iPhone的\"设置-隐私-%@\"选项中，允许热信访问你的手机%@。", typeStr, typeStr];
+        
+        UILabel *tipLabel = [[UILabel alloc] init];
+        tipLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        tipLabel.numberOfLines = 0;
+        tipLabel.text = msgStr;
+        tipLabel.textColor = [UIColor blackColor];
+        tipLabel.font = [UIFont systemFontOfSize:20];
+        [self.view addSubview:tipLabel];
+        
+        [self.view addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-[tipLabel]-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(tipLabel)]];
+        [self.view addConstraint:[NSLayoutConstraint constraintWithItem:tipLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1 constant:0]];
+    }
+    else
+    {
+        _isCameraError = YES;
+    }
+}
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
@@ -689,10 +734,35 @@ static MyPhotoView *photoInstance;
         MyPhotoView *photoView = [MyImagePicker getTakePicture:cell.bounds];
         [cell.contentView addSubview:photoView];
         
-        photoView.touchUpInsideBlock = ^(MyPhotoView *sender){
-            [[MyImagePicker captureSession] stopRunning];
-            [weakSelf presentViewController:weakSelf.imagePicker animated:YES completion:nil];
-        };
+        if(_isCameraError)
+        {
+            UIView *view = [photoView viewWithTag:500];
+            if(view)
+            {
+                [view removeFromSuperview];
+            }
+            
+            UILabel *tipLabel = [[UILabel alloc] init];
+            tipLabel.translatesAutoresizingMaskIntoConstraints = NO;
+            tipLabel.numberOfLines = 0;
+            tipLabel.text = @"相机访问受限";
+            tipLabel.tag = 500;
+            tipLabel.textAlignment = NSTextAlignmentCenter;
+            tipLabel.textColor = [UIColor blackColor];
+            tipLabel.font = [UIFont boldSystemFontOfSize:14];
+            [photoView addSubview:tipLabel];
+            
+            [photoView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-[tipLabel]-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(tipLabel)]];
+            [photoView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[tipLabel]-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(tipLabel)]];
+        }
+        
+        if(!_isCameraError)
+        {
+            photoView.touchUpInsideBlock = ^(MyPhotoView *sender){
+                [[MyImagePicker captureSession] stopRunning];
+                [weakSelf presentViewController:weakSelf.imagePicker animated:YES completion:nil];
+            };
+        }
     }
     else
     {
